@@ -1,6 +1,6 @@
 <?php
 
-	require("../../../config.php");
+	require("../../config.php");
 	// functions.php
 	//var_dump($GLOBALS);
 	
@@ -188,6 +188,47 @@
 		
 	}
 	
+	function saveUserInterest ($interest_id) {
+		
+		echo "huviala: ".$interest_id."<br>";
+		echo "kasutaja: ".$_SESSION["userId"]."<br>";
+		
+		$database = "if16_romil";
+		$mysqli = new mysqli($GLOBALS["serverHost"], $GLOBALS["serverUsername"], $GLOBALS["serverPassword"], $database);
+		//kas on juba olemas
+		$stmt = $mysqli->prepare("
+			SELECT id FROM user_interests
+			WHERE user_id=? AND interest_id=?
+		");
+		$stmt->bind_param("ii", $_SESSION["userId"], $interest_id);
+		$stmt->execute();
+		if ($stmt->fetch()) {
+			//oli olemas
+			echo "juba olemas";
+			//ära salvestamisega jätka
+			return;
+			
+		}
+		$stmt->close();
+			//jätkan salvestamisega...
+			
+		$stmt = $mysqli->prepare("INSERT INTO user_interests (user_id, interest_id) VALUES (?, ?)");
+	
+		echo $mysqli->error;
+		
+		$stmt->bind_param("ii", $_SESSION["userId"], $interest_id);
+		
+		if($stmt->execute()) {
+			echo "salvestamine õnnestus";
+		} else {
+		 	echo "ERROR ".$stmt->error;
+		}
+		
+		$stmt->close();
+		$mysqli->close();
+		
+	}
+	
 	function getAllInterests() {
 		
 		$database = "if16_romil";
@@ -214,6 +255,45 @@
 			$i = new StdClass();
 			
 			$i->id = $id;
+			$i->interest = $interest;
+		
+			array_push($result, $i);
+		}
+		
+		$stmt->close();
+		$mysqli->close();
+		
+		return $result;
+	}
+	
+	function getAllUserInterests() {
+		
+		$database = "if16_romil";
+		$mysqli = new mysqli($GLOBALS["serverHost"], $GLOBALS["serverUsername"], $GLOBALS["serverPassword"], $database);
+		
+		$stmt = $mysqli->prepare("
+			SELECT interest
+			FROM interests
+			JOIN user_interests
+			ON interests.id = user_interests.interest_id
+			WHERE user_interests.user_id = ?
+		");
+		echo $mysqli->error;
+		$stmt->bind_param("i", $_SESSION["userId"]);
+		$stmt->bind_result($interest);
+		$stmt->execute();
+		
+		
+		//tekitan massiivi
+		$result = array();
+		
+		// tee seda seni, kuni on rida andmeid
+		// mis vastab select lausele
+		while ($stmt->fetch()) {
+			
+			//tekitan objekti
+			$i = new StdClass();
+			
 			$i->interest = $interest;
 		
 			array_push($result, $i);
